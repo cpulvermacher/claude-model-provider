@@ -15,9 +15,7 @@
 		"AI",
 		"Chat"
 	],
-	"enabledApiProposals": [
-		"chatProvider"
-	],
+	"enabledApiProposals": [ ],
 	"activationEvents": [
 		"onStartupFinished"
 	],
