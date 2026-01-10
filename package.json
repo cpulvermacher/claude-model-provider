@@ -31,7 +31,7 @@
 	"scripts": {
 		"vscode:prepublish": "rm -rf out/ && npm run esbuild-base -- --minify",
 		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-		"build": "npx vsce package",
+		"build": "pnpm exec vsce package --no-dependencies",
 		"format": "pnpm exec biome check --write src/",
 		"lint": "tsc --noEmit && pnpm exec biome check src/",
 		"watch": "tsc -watch -p ./"
