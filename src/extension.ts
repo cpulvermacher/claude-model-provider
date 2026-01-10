@@ -5,16 +5,15 @@ const CLAUDE_PARTICIPANT_ID = 'cpulvermacher.claude';
 
 // See https://docs.anthropic.com/en/docs/about-claude/models
 const claudeModel = {
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 8192,
+    model: 'claude-sonnet-4-5-20250929',
+    max_tokens: 64000,
 };
-const maxInputTokens = 200000;
 const modelInformation: vscode.LanguageModelChatInformation = {
-    id: 'claude',
+    id: claudeModel.model,
     name: 'Claude',
     family: 'claude',
-    version: '3.5',
-    maxInputTokens: maxInputTokens,
+    version: '4.5',
+    maxInputTokens: 200000,
     maxOutputTokens: claudeModel.max_tokens,
     capabilities: {},
 };
@@ -84,7 +83,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 async function handler(
     request: vscode.ChatRequest,
-    context: vscode.ChatContext,
+    _context: vscode.ChatContext,
     stream: vscode.ChatResponseStream
 ): Promise<IClaudeChatResult> {
     try {
@@ -114,18 +113,18 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     constructor() {}
 
     async provideLanguageModelChatInformation(
-        options: vscode.PrepareLanguageModelChatModelOptions,
-        token: vscode.CancellationToken
+        _options: vscode.PrepareLanguageModelChatModelOptions,
+        _token: vscode.CancellationToken
     ) {
         return [modelInformation];
     }
 
     async provideLanguageModelChatResponse(
-        model: vscode.LanguageModelChatInformation,
+        _model: vscode.LanguageModelChatInformation,
         messages: readonly vscode.LanguageModelChatRequestMessage[],
-        options: vscode.ProvideLanguageModelChatResponseOptions,
+        _options: vscode.ProvideLanguageModelChatResponseOptions,
         progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-        token: vscode.CancellationToken
+        _token: vscode.CancellationToken
     ): Promise<void> {
         await new Promise((resolve, reject) => {
             if (!anthropic) {
@@ -154,7 +153,7 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     async provideTokenCount(
         model: vscode.LanguageModelChatInformation,
         text: string | vscode.LanguageModelChatRequestMessage,
-        token: vscode.CancellationToken
+        _token: vscode.CancellationToken
     ): Promise<number> {
         if (!anthropic) {
             throw new Error('Anthropic client is not initialized.');
@@ -168,7 +167,7 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
 
         const response = await anthropic.messages.countTokens({
             messages: createMessages(prompt),
-            model: claudeModel.model,
+            model: model.id,
         });
         if (!response) {
             throw new Error('Failed to count tokens.');
