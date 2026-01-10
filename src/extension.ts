@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { Anthropic } from '@anthropic-ai/sdk'; // Import Anthropic SDK
-
-const CLAUDE_PARTICIPANT_ID = 'cpulvermacher.claude';
+import { Anthropic } from '@anthropic-ai/sdk';
 
 // See https://docs.anthropic.com/en/docs/about-claude/models
 const claudeModel = {
@@ -17,25 +15,6 @@ const modelInformation: vscode.LanguageModelChatInformation = {
     maxOutputTokens: claudeModel.max_tokens,
     capabilities: {},
 };
-
-interface IClaudeChatResult extends vscode.ChatResult {
-    metadata: {
-        command: string;
-    };
-}
-
-const logger = vscode.env.createTelemetryLogger({
-    sendEventData(eventName, data) {
-        // Capture event telemetry
-        console.log(`Event: ${eventName}`);
-        console.log(`Data: ${JSON.stringify(data)}`);
-    },
-    sendErrorData(error, data) {
-        // Capture error telemetry
-        console.error(`Error: ${error}`);
-        console.error(`Data: ${JSON.stringify(data)}`);
-    },
-});
 
 let anthropic: Anthropic | undefined;
 
@@ -63,16 +42,6 @@ async function initAnthropicClient(context: vscode.ExtensionContext) {
 export async function activate(context: vscode.ExtensionContext) {
     await initAnthropicClient(context);
 
-    const claude = vscode.chat.createChatParticipant(
-        CLAUDE_PARTICIPANT_ID,
-        handler
-    );
-    claude.iconPath = vscode.Uri.joinPath(
-        context.extensionUri,
-        'anthropic-icon.png'
-    ); // Update icon if needed
-    context.subscriptions.push(claude);
-
     context.subscriptions.push(
         vscode.lm.registerLanguageModelChatProvider(
             'cpulvermacher',
@@ -81,33 +50,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 }
 
-async function handler(
-    request: vscode.ChatRequest,
-    _context: vscode.ChatContext,
-    stream: vscode.ChatResponseStream
-): Promise<IClaudeChatResult> {
-    try {
-        return await new Promise<IClaudeChatResult>((resolve, reject) => {
-            anthropic!.messages
-                .stream(createModelParamsStreaming(request.prompt))
-                .on('text', (text) => {
-                    stream.markdown(text);
-                })
-                .on('error', (err) => {
-                    handleError(logger, err, stream);
-                    reject(err);
-                })
-                .on('finalMessage', () => {
-                    resolve({ metadata: { command: 'claude_chat' } });
-                });
-        });
-    } catch (err) {
-        handleError(logger, err, stream);
-    }
-
-    logger.logUsage('request', { kind: 'claude' });
-    return { metadata: { command: 'claude_chat' } };
-}
+export function deactivate() {}
 
 export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     constructor() {}
@@ -215,20 +158,3 @@ function messageToPrompt(
         })
         .join(' ');
 }
-
-function handleError(
-    logger: vscode.TelemetryLogger,
-    err: unknown,
-    stream: vscode.ChatResponseStream
-): void {
-    if (err instanceof Error) {
-        logger.logError(err);
-        console.error(err.message);
-        stream.markdown(`An error occurred: ${err.message}`);
-    } else {
-        console.error('An unknown error occurred');
-        stream.markdown('An unknown error occurred');
-    }
-}
-
-export function deactivate() {}

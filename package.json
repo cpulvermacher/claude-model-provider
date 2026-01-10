@@ -25,17 +25,6 @@
 				"vendor": "cpulvermacher",
         "displayName": "claude"
 			}
-		],
-		"chatParticipants": [
-			{
-				"id": "cpulvermacher.claude",
-				"fullName": "Claude",
-				"name": "claude",
-				"description": "What do you need help with?",
-				"isSticky": true,
-				"commands": [],
-				"disambiguation": []
-			}
 		]
 	},
 	"main": "./out/extension.js",
