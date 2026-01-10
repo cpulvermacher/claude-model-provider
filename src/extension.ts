@@ -9,13 +9,14 @@ const claudeModel = {
     max_tokens: 8192,
 };
 const maxInputTokens = 200000;
-const chatResponseProviderMetadata: vscode.ChatResponseProviderMetadata = {
-    vendor: 'Anthropic',
+const modelInformation: vscode.LanguageModelChatInformation = {
+    id: 'claude',
     name: 'Claude',
     family: 'claude',
     version: '3.5',
     maxInputTokens: maxInputTokens,
     maxOutputTokens: claudeModel.max_tokens,
+    capabilities: {},
 };
 
 interface IClaudeChatResult extends vscode.ChatResult {
@@ -74,10 +75,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(claude);
 
     context.subscriptions.push(
-        vscode.lm.registerChatModelProvider(
-            'anthropic.claude',
-            languageModelProvider,
-            chatResponseProviderMetadata
+        vscode.lm.registerLanguageModelChatProvider(
+            'cpulvermacher',
+            new ChatModelProvider()
         )
     );
 }
@@ -110,20 +110,30 @@ async function handler(
     return { metadata: { command: 'claude_chat' } };
 }
 
-const languageModelProvider: vscode.LanguageModelChatProvider = {
-    async provideLanguageModelResponse(
-        messages,
-        options,
-        extensionId,
-        progress
+export class ChatModelProvider implements vscode.LanguageModelChatProvider {
+    constructor() {}
+
+    async provideLanguageModelChatInformation(
+        options: vscode.PrepareLanguageModelChatModelOptions,
+        token: vscode.CancellationToken
     ) {
+        return [modelInformation];
+    }
+
+    async provideLanguageModelChatResponse(
+        model: vscode.LanguageModelChatInformation,
+        messages: readonly vscode.LanguageModelChatRequestMessage[],
+        options: vscode.ProvideLanguageModelChatResponseOptions,
+        progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+        token: vscode.CancellationToken
+    ): Promise<void> {
         await new Promise((resolve, reject) => {
             if (!anthropic) {
                 reject(new Error('Anthropic client is not initialized.'));
                 return;
             }
 
-            const concatenatedContent = createPromptString(messages);
+            const concatenatedContent = messagesToPrompt(messages);
             if (concatenatedContent.length === 0) {
                 resolve('');
                 return;
@@ -131,8 +141,7 @@ const languageModelProvider: vscode.LanguageModelChatProvider = {
             anthropic.messages
                 .stream(createModelParamsStreaming(concatenatedContent))
                 .on('text', (text) => {
-                    const textPart = new vscode.LanguageModelTextPart(text);
-                    progress.report({ index: 0, part: textPart });
+                    progress.report(new vscode.LanguageModelTextPart(text));
                 })
                 .on('error', (err) => {
                     reject(err);
@@ -141,13 +150,17 @@ const languageModelProvider: vscode.LanguageModelChatProvider = {
                     resolve('');
                 });
         });
-    },
-    async provideTokenCount(text) {
+    }
+    async provideTokenCount(
+        model: vscode.LanguageModelChatInformation,
+        text: string | vscode.LanguageModelChatRequestMessage,
+        token: vscode.CancellationToken
+    ): Promise<number> {
         if (!anthropic) {
             throw new Error('Anthropic client is not initialized.');
         }
 
-        const prompt = createPromptString(text);
+        const prompt = messageToPrompt(text);
 
         if (prompt.length === 0) {
             return 0;
@@ -162,8 +175,8 @@ const languageModelProvider: vscode.LanguageModelChatProvider = {
         }
 
         return response.input_tokens;
-    },
-};
+    }
+}
 
 function createModelParamsStreaming(
     userPrompt: string
@@ -179,20 +192,20 @@ function createMessages(userPrompt: string): Anthropic.MessageParam[] {
     return [{ role: 'user', content: userPrompt }];
 }
 
-function createPromptString(
-    messages:
-        | string
-        | vscode.LanguageModelChatMessage
-        | vscode.LanguageModelChatMessage[]
+function messagesToPrompt(
+    messages: readonly vscode.LanguageModelChatRequestMessage[]
 ): string {
-    if (typeof messages === 'string') {
-        return messages;
-    }
-    if (Array.isArray(messages)) {
-        return messages.map((msg) => createPromptString(msg)).join(' ');
+    return messages.map((msg) => messageToPrompt(msg)).join(' ');
+}
+
+function messageToPrompt(
+    message: string | vscode.LanguageModelChatRequestMessage
+): string {
+    if (typeof message === 'string') {
+        return message;
     }
 
-    return messages.content
+    return message.content
         .map((msg) => {
             if (msg instanceof vscode.LanguageModelTextPart) {
                 return msg.value;
