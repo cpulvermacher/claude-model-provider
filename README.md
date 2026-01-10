@@ -1,20 +1,13 @@
-**Note** Since this uses proposed APIs, you need to install the extension .vsix manually.
-This only allows using the @claude chat participant (requires Copilot Chat to be enabled and logged in to enable the Chat window).
-If you want the chat model to be available via `vscode.lm.selectChatModels()`, add
-```
-"enable-proposed-api": ["cpulvermacher.claude"]
-```
-to your `.vscode/argv.json` and restart VSCode. See the documentation on [Proposed APIs](https://code.visualstudio.com/api/advanced-topics/using-proposed-api) for more details.
+# Anthropic Claude Language Model Provider Extension for VS Code
 
-# Anthropic Claude Chat Extension for VS Code
+This Visual Studio Code extension contributes a language model that can be used in the chat view and also by other extensions that allow selecting language models.
 
-This Visual Studio Code extension integrates Anthropic's Claude chat capabilities directly into your development environment, allowing you to interact with the Claude Sonnet AI model without leaving your editor.
+## Why?
 
-## Features
+Adding your Anthropic API key directly in Visual Studio Code is possible but will work only in chat.
+Trying to use models from another extension will produce `system: text content blocks must be non-empty` errors.
 
-- Seamless integration with VS Code's chat interface
-- Direct communication with Anthropic's API
-- Support for streaming responses
+This extension allows using Anthropic models from other extensions as well.
 
 ## Prerequisites
 
@@ -29,28 +22,9 @@ Before using this extension, you need to have an Anthropic API key. If you don't
 
 The extension will prompt you to enter your API key when you first use it.
 
-## Usage
-
-1. Open the Command Palette (Ctrl+Shift+P or Cmd+Shift+P on macOS).
-2. Type "Claude Chat" and select it from the list.
-3. Type your question or prompt in the chat input.
-4. Claude's response will be streamed back to you in the chat window.
-
-## Configuration
-
-The extension currently uses the "claude-3-5-sonnet-20240620" model by default. You can change this in the `src/extension.ts` file if you prefer a different model.
-
-## Error Handling
-
-The extension includes basic error handling. If an error occurs, it will be displayed in the chat window and logged for debugging purposes.
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License.
 
 ## Disclaimer
 
