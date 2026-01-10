@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import { Anthropic } from '@anthropic-ai/sdk';
+import * as vscode from 'vscode';
 
 // See https://docs.anthropic.com/en/docs/about-claude/models
 const claudeModel = {
@@ -53,8 +53,6 @@ export async function activate(context: vscode.ExtensionContext) {
 export function deactivate() {}
 
 export class ChatModelProvider implements vscode.LanguageModelChatProvider {
-    constructor() {}
-
     async provideLanguageModelChatInformation(
         _options: vscode.PrepareLanguageModelChatModelOptions,
         _token: vscode.CancellationToken
