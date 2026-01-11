@@ -1,8 +1,8 @@
 {
 	"name": "claude",
 	"publisher": "cpulvermacher",
-	"displayName": "Claude",
-	"description": "Provides Claude chat model",
+	"displayName": "Anthropic Model Provider",
+	"description": "Provides claude language models via the Anthropic API",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cpulvermacher/claude-vscode.git"

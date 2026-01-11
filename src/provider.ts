@@ -1,22 +1,8 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-// See https://docs.anthropic.com/en/docs/about-claude/models
-const claudeModel = {
-    model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 64000,
-};
-const modelInformation: vscode.LanguageModelChatInformation = {
-    id: claudeModel.model,
-    name: 'Claude',
-    family: 'claude',
-    version: '4.5',
-    maxInputTokens: 200000,
-    maxOutputTokens: claudeModel.max_tokens,
-    capabilities: {},
-};
-
 let anthropic: Anthropic | undefined;
+let availableModels: vscode.LanguageModelChatInformation[] = [];
 
 export async function initAnthropicClient(context: vscode.ExtensionContext) {
     if (!anthropic) {
@@ -36,6 +22,48 @@ export async function initAnthropicClient(context: vscode.ExtensionContext) {
         anthropic = new Anthropic({
             apiKey,
         });
+
+        // Fetch available models from the API
+        await fetchAvailableModels();
+    }
+}
+
+async function fetchAvailableModels() {
+    if (!anthropic) {
+        throw new Error('Anthropic client is not initialized.');
+    }
+
+    try {
+        const modelsResponse = await anthropic.models.list();
+
+        availableModels = modelsResponse.data.map((model) => {
+            // Extract version from model ID (e.g., "claude-sonnet-4-5-20250929" -> "4.5")
+            const versionMatch = model.id.match(/claude-\w+-(\d+)-(\d+)/);
+            const version = versionMatch
+                ? `${versionMatch[1]}.${versionMatch[2]}`
+                : '1.0';
+
+            // Use default token limits (these may vary by model, see Anthropic docs)
+            // Most Claude 3+ models support 200k input and at least 8k output tokens
+            const maxInputTokens = 200000;
+            const maxOutputTokens = model.id.includes('opus')
+                ? 16384
+                : model.id.includes('sonnet')
+                  ? 64000
+                  : 8192;
+
+            return {
+                id: model.id,
+                name: model.display_name,
+                family: 'claude',
+                version: version,
+                maxInputTokens: maxInputTokens,
+                maxOutputTokens: maxOutputTokens,
+                capabilities: {},
+            };
+        });
+    } catch (error) {
+        throw new Error(`Failed to fetch models: ${error}`);
     }
 }
 
@@ -44,11 +72,11 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         _options: vscode.PrepareLanguageModelChatModelOptions,
         _token: vscode.CancellationToken
     ) {
-        return [modelInformation];
+        return availableModels;
     }
 
     async provideLanguageModelChatResponse(
-        _model: vscode.LanguageModelChatInformation,
+        model: vscode.LanguageModelChatInformation,
         messages: readonly vscode.LanguageModelChatRequestMessage[],
         _options: vscode.ProvideLanguageModelChatResponseOptions,
         progress: vscode.Progress<vscode.LanguageModelResponsePart>,
@@ -66,7 +94,9 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
                 return;
             }
             anthropic.messages
-                .stream(this.createModelParamsStreaming(concatenatedContent))
+                .stream(
+                    this.createModelParamsStreaming(model, concatenatedContent)
+                )
                 .on('text', (text) => {
                     progress.report(new vscode.LanguageModelTextPart(text));
                 })
@@ -105,12 +135,14 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     }
 
     private createModelParamsStreaming(
+        model: vscode.LanguageModelChatInformation,
         userPrompt: string
     ): Anthropic.MessageCreateParamsStreaming {
         return {
             messages: this.createMessages(userPrompt),
             stream: true,
-            ...claudeModel,
+            model: model.id,
+            max_tokens: model.maxOutputTokens,
         };
     }
 
