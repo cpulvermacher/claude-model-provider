@@ -7,7 +7,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.lm.registerLanguageModelChatProvider(
-            'cpulvermacher',
+            'claude-model-provider',
             new ChatModelProvider()
         )
     );

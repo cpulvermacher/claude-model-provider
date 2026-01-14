@@ -1,8 +1,8 @@
 {
-	"name": "claude",
+	"name": "claude-model-provider",
 	"publisher": "cpulvermacher",
-	"displayName": "Anthropic Model Provider",
-	"description": "Provides claude language models via the Anthropic API",
+	"displayName": "Claude Model Provider",
+	"description": "Provides Claude language models via the Anthropic API",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cpulvermacher/claude-vscode.git"
@@ -22,7 +22,7 @@
 	"contributes": {
 		"languageModelChatProviders": [
 			{
-				"vendor": "cpulvermacher",
+				"vendor": "claude-model-provider",
 				"displayName": "claude"
 			}
 		]
