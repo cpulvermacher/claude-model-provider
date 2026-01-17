@@ -13,7 +13,14 @@
     },
     "categories": [
         "AI",
-        "Chat"
+        "Chat",
+        "Machine Learning"
+    ],
+    "keywords": [
+        "ai",
+        "chat",
+        "language model",
+        "claude"
     ],
     "enabledApiProposals": [],
     "activationEvents": [
