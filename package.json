@@ -23,9 +23,7 @@
         "claude"
     ],
     "enabledApiProposals": [],
-    "activationEvents": [
-        "onStartupFinished"
-    ],
+    "activationEvents": [],
     "contributes": {
         "languageModelChatProviders": [
             {
