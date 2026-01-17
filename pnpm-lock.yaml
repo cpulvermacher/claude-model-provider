@@ -16,8 +16,8 @@ importers:
         specifier: ^2.3.11
         version: 2.3.11
       '@types/node':
-        specifier: ^20.5.9
-        version: 20.19.28
+        specifier: 22.x
+        version: 22.19.7
       '@types/vscode':
         specifier: 1.107.0
         version: 1.107.0
@@ -401,8 +401,8 @@ packages:
   '@textlint/types@15.5.0':
     resolution: {integrity: sha512-EjAPbuA+3NyQ9WyFP7iUlddi35F3mGrf4tb4cZM0nWywbtEJ3+XAYqL+5RsF0qFeSguxGir09NdZOWrG9wVOUQ==}
 
-  '@types/node@20.19.28':
-    resolution: {integrity: sha512-VyKBr25BuFDzBFCK5sUM6ZXiWfqgCTwTAOK8qzGV/m9FCirXYDlmczJ+d5dXBAQALGCdRRdbteKYfJ84NGEusw==}
+  '@types/node@22.19.7':
+    resolution: {integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==}
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -1771,7 +1771,7 @@ snapshots:
     dependencies:
       '@textlint/ast-node-types': 15.5.0
 
-  '@types/node@20.19.28':
+  '@types/node@22.19.7':
     dependencies:
       undici-types: 6.21.0
 
