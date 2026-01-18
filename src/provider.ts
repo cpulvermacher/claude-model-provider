@@ -1,19 +1,12 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
+import { getApiKey, promptAndStoreApiKey } from './secrets';
+
 export async function initializeProvider(context: vscode.ExtensionContext) {
-    let apiKey = await context.secrets.get('claude.apiKey');
+    let apiKey = await getApiKey(context);
     if (!apiKey) {
-        apiKey = await vscode.window.showInputBox({
-            prompt: 'Enter your Anthropic API Key',
-            ignoreFocusOut: true,
-        });
-
-        if (!apiKey) {
-            throw new Error('API Key is required');
-        }
-
-        await context.secrets.store('claude.apiKey', apiKey);
+        apiKey = await promptAndStoreApiKey(context);
     }
     const anthropic = new Anthropic({ apiKey });
     const availableModels = await fetchAvailableModels(anthropic);
