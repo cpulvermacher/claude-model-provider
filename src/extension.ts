@@ -1,10 +1,17 @@
 import * as vscode from 'vscode';
 
 import { initializeProvider } from './provider';
+import { resetApiKey } from './secrets';
 
 export async function activate(context: vscode.ExtensionContext) {
-    const provider = await initializeProvider(context);
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'claude-model-provider.resetApiKey',
+            () => resetApiKey(context)
+        )
+    );
 
+    const provider = await initializeProvider(context);
     context.subscriptions.push(
         vscode.lm.registerLanguageModelChatProvider(
             'claude-model-provider',

@@ -30,6 +30,12 @@
                 "vendor": "claude-model-provider",
                 "displayName": "claude"
             }
+        ],
+        "commands": [
+            {
+                "command": "claude-model-provider.resetApiKey",
+                "title": "Claude Model Provider: Reset API Key"
+            }
         ]
     },
     "main": "./out/extension.js",
