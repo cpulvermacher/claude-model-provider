@@ -28,8 +28,4 @@ export async function resetApiKey(context: vscode.ExtensionContext) {
         vscode.window.showWarningMessage('API Key reset cancelled.');
         return;
     }
-
-    vscode.window.showInformationMessage(
-        'API key updated successfully. Please reload the window for changes to take effect.'
-    );
 }

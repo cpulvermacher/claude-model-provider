@@ -1,15 +1,34 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-import { getApiKey, promptAndStoreApiKey } from './secrets';
+import { getApiKey, promptAndStoreApiKey, resetApiKey } from './secrets';
 
 export async function initializeProvider(context: vscode.ExtensionContext) {
     let apiKey = await getApiKey(context);
     if (!apiKey) {
         apiKey = await promptAndStoreApiKey(context);
     }
-    const anthropic = new Anthropic({ apiKey });
-    const availableModels = await fetchAvailableModels(anthropic);
+
+    let anthropic: Anthropic;
+    let availableModels: vscode.LanguageModelChatInformation[];
+    try {
+        anthropic = new Anthropic({ apiKey });
+        availableModels = await fetchAvailableModels(anthropic);
+    } catch (error) {
+        const resetApiKeyAction = 'Reset API Key';
+        const abortAction = 'Abort';
+        const action = await vscode.window.showErrorMessage(
+            `Failed to initialize Anthropic client: ${error}`,
+            resetApiKeyAction,
+            abortAction
+        );
+
+        if (action === resetApiKeyAction) {
+            await resetApiKey(context);
+            return await initializeProvider(context);
+        }
+        throw error;
+    }
 
     return new ChatModelProvider(anthropic, availableModels);
 }
