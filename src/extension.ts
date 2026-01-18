@@ -8,10 +8,16 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             'claude-model-provider.resetApiKey',
             async () => {
-                await resetApiKey(context);
-                vscode.window.showInformationMessage(
-                    'API key updated successfully. Please reload the window for changes to take effect.'
-                );
+                try {
+                    await resetApiKey(context);
+                    vscode.window.showInformationMessage(
+                        'API key updated successfully. Please reload the window for changes to take effect.'
+                    );
+                } catch {
+                    vscode.window.showWarningMessage(
+                        'API key reset cancelled.'
+                    );
+                }
             }
         )
     );

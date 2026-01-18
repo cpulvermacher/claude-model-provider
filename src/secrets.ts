@@ -22,10 +22,5 @@ export async function promptAndStoreApiKey(context: vscode.ExtensionContext) {
 export async function resetApiKey(context: vscode.ExtensionContext) {
     await context.secrets.delete('claude.apiKey');
 
-    try {
-        await promptAndStoreApiKey(context);
-    } catch {
-        vscode.window.showWarningMessage('API Key reset cancelled.');
-        return;
-    }
+    await promptAndStoreApiKey(context);
 }
