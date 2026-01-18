@@ -1,42 +1,31 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-let anthropic: Anthropic | undefined;
-let availableModels: vscode.LanguageModelChatInformation[] = [];
-
-export async function initAnthropicClient(context: vscode.ExtensionContext) {
-    if (!anthropic) {
-        let apiKey = await context.secrets.get('claude.apiKey');
-        if (!apiKey) {
-            apiKey = await vscode.window.showInputBox({
-                prompt: 'Enter your Anthropic API Key',
-                ignoreFocusOut: true,
-            });
-
-            if (!apiKey) {
-                throw new Error('API Key is required');
-            }
-
-            await context.secrets.store('claude.apiKey', apiKey);
-        }
-        anthropic = new Anthropic({
-            apiKey,
+export async function initializeProvider(context: vscode.ExtensionContext) {
+    let apiKey = await context.secrets.get('claude.apiKey');
+    if (!apiKey) {
+        apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Anthropic API Key',
+            ignoreFocusOut: true,
         });
 
-        // Fetch available models from the API
-        await fetchAvailableModels();
+        if (!apiKey) {
+            throw new Error('API Key is required');
+        }
+
+        await context.secrets.store('claude.apiKey', apiKey);
     }
+    const anthropic = new Anthropic({ apiKey });
+    const availableModels = await fetchAvailableModels(anthropic);
+
+    return new ChatModelProvider(anthropic, availableModels);
 }
 
-async function fetchAvailableModels() {
-    if (!anthropic) {
-        throw new Error('Anthropic client is not initialized.');
-    }
-
+async function fetchAvailableModels(anthropic: Anthropic) {
     try {
         const modelsResponse = await anthropic.models.list();
 
-        availableModels = modelsResponse.data.map((model) => {
+        return modelsResponse.data.map((model) => {
             // Extract version from model ID (e.g., "claude-sonnet-4-5-20250929" -> "4.5")
             const versionMatch = model.id.match(/claude-\w+-(\d+)-(\d+)/);
             const version = versionMatch
@@ -68,11 +57,16 @@ async function fetchAvailableModels() {
 }
 
 export class ChatModelProvider implements vscode.LanguageModelChatProvider {
+    constructor(
+        private anthropic: Anthropic,
+        private availableModels: vscode.LanguageModelChatInformation[] = []
+    ) {}
+
     async provideLanguageModelChatInformation(
         _options: vscode.PrepareLanguageModelChatModelOptions,
         _token: vscode.CancellationToken
     ) {
-        return availableModels;
+        return this.availableModels;
     }
 
     async provideLanguageModelChatResponse(
@@ -83,17 +77,12 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         _token: vscode.CancellationToken
     ): Promise<void> {
         await new Promise((resolve, reject) => {
-            if (!anthropic) {
-                reject(new Error('Anthropic client is not initialized.'));
-                return;
-            }
-
             const concatenatedContent = this.messagesToPrompt(messages);
             if (concatenatedContent.length === 0) {
                 resolve('');
                 return;
             }
-            anthropic.messages
+            this.anthropic.messages
                 .stream(
                     this.createModelParamsStreaming(model, concatenatedContent)
                 )
@@ -113,17 +102,13 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         text: string | vscode.LanguageModelChatRequestMessage,
         _token: vscode.CancellationToken
     ): Promise<number> {
-        if (!anthropic) {
-            throw new Error('Anthropic client is not initialized.');
-        }
-
         const prompt = this.messageToPrompt(text);
 
         if (prompt.length === 0) {
             return 0;
         }
 
-        const response = await anthropic.messages.countTokens({
+        const response = await this.anthropic.messages.countTokens({
             messages: this.createMessages(prompt),
             model: model.id,
         });

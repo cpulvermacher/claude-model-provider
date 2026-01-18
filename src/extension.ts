@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 
-import { ChatModelProvider, initAnthropicClient } from './provider';
+import { initializeProvider } from './provider';
 
 export async function activate(context: vscode.ExtensionContext) {
-    await initAnthropicClient(context);
+    const provider = await initializeProvider(context);
 
     context.subscriptions.push(
         vscode.lm.registerLanguageModelChatProvider(
             'claude-model-provider',
-            new ChatModelProvider()
+            provider
         )
     );
 }
