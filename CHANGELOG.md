@@ -2,7 +2,8 @@
 
 ## [0.3.2]
 
-- Add icon
+- Update anthropic API sdk, adds support for Claude Opus 4.6.
+- Add extension icon.
 
 ## [0.3.1]
 
