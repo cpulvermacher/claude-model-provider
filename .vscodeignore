@@ -3,5 +3,5 @@
 # whitelist included files
 !LICENSE
 !CHANGELOG.md
-!anthropic-icon.png
 !out/extension.js
+!images/icon.png
