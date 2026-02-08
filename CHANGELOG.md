@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.2]
+
+- Add icon
+
 ## [0.3.1]
 
 - Fix error handling for reset API key command.
