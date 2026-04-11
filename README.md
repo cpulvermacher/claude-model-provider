@@ -4,22 +4,18 @@ This Visual Studio Code extension contributes language models that can be used i
 
 ## Why?
 
-Adding your Anthropic API key directly in Visual Studio Code is possible but will work only in chat.
-Trying to use models from another extension will produce `system: text content blocks must be non-empty` errors.
+Adding your Anthropic API key directly in Visual Studio Code only allows using Claude models from the Chat sidebar. Trying to use the models from another extension will produce `system: text content blocks must be non-empty` errors.
 
-This extension allows using Anthropic's models from other extensions as well.
+This extension allows using Claude models from other extensions as well.
 
 ## Use in Chat
 
 By default, extension-provided language models are not visible in the chat model picker. Use the `Chat: Manage Language Models` command to list all models, and toggle visibility for the model(s) you want. Afterwards, the models should be available in `Ask` mode.
 
-## Prerequisites
-
-Before using this extension, you need to have an Anthropic API key. If you don't have one, you can obtain it from [Anthropic's website](https://www.anthropic.com/).
-
 ## Setup
 
 The extension will prompt you to enter your API key when you first use it.
+It's recommended to generate a new key from the [Claude Console](https://platform.claude.com/settings/keys).
 
 ## Contributing
 

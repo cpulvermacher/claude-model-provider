@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.3]
+
+- Update Anthropic API SDK.
+
 ## [0.3.2]
 
 - Update anthropic API sdk, adds support for Claude Opus 4.6.
