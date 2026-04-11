@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@anthropic-ai/sdk':
-        specifier: ^0.74.0
-        version: 0.74.0
+        specifier: ^0.88.0
+        version: 0.88.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.11
@@ -33,8 +33,8 @@ importers:
 
 packages:
 
-  '@anthropic-ai/sdk@0.74.0':
-    resolution: {integrity: sha512-srbJV7JKsc5cQ6eVuFzjZO7UR3xEPJqPamHFIe29bs38Ij2IripoAhC0S5NslNbaFUYqBKypmmpzMTpqfHEUDw==}
+  '@anthropic-ai/sdk@0.88.0':
+    resolution: {integrity: sha512-QQOtB5U9ZBJQj6y1ICmDZl14LWa4JCiJRoihI+0yuZ4OjbONrakP0yLwPv4DJFb3VYCtQM31bTOpCBMs2zghPw==}
     hasBin: true
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
@@ -1424,7 +1424,7 @@ packages:
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.74.0':
+  '@anthropic-ai/sdk@0.88.0':
     dependencies:
       json-schema-to-ts: 3.1.1
 
