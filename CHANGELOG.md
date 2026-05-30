@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.3.4]
+
+- Use token limits reported by the API instead of hardcoded values per model family. Newer models such as Claude Sonnet 4.6 and Opus 4.8 now allow up to 872,000 input tokens.
+- Update Anthropic API SDK.
+
 ## [0.3.3]
 
 - Update Anthropic API SDK.
