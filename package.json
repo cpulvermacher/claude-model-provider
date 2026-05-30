@@ -8,11 +8,15 @@
         "type": "git",
         "url": "https://github.com/cpulvermacher/claude-model-provider.git"
     },
-    "version": "0.3.3",
+    "version": "0.3.4",
     "engines": {
         "vscode": "^1.107.0"
     },
-    "categories": ["AI", "Chat", "Machine Learning"],
+    "categories": [
+        "AI",
+        "Chat",
+        "Machine Learning"
+    ],
     "keywords": [
         "ai",
         "chat",
