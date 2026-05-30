@@ -44,22 +44,17 @@ async function fetchAvailableModels(anthropic: Anthropic) {
                 ? `${versionMatch[1]}.${versionMatch[2]}`
                 : '1.0';
 
-            // Use default token limits (these may vary by model, see Anthropic docs)
-            // Most Claude 3+ models support 200k input and at least 8k output tokens
-            const maxInputTokens = 200000;
-            const maxOutputTokens = model.id.includes('opus')
-                ? 16384
-                : model.id.includes('sonnet')
-                  ? 64000
-                  : 8192;
+            const maxOutputTokens = model.max_tokens ?? 64000;
+            const maxInputTokens =
+                (model.max_input_tokens ?? 200000) - maxOutputTokens;
 
             return {
                 id: model.id,
                 name: model.display_name,
                 family: 'claude',
                 version: version,
-                maxInputTokens: maxInputTokens,
-                maxOutputTokens: maxOutputTokens,
+                maxOutputTokens,
+                maxInputTokens,
                 capabilities: {},
             };
         });
