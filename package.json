@@ -13,7 +13,15 @@
         "vscode": "^1.107.0"
     },
     "categories": ["AI", "Chat", "Machine Learning"],
-    "keywords": ["ai", "chat", "language model", "claude"],
+    "keywords": [
+        "ai",
+        "chat",
+        "language model",
+        "claude",
+        "anthropic",
+        "sonnet",
+        "opus"
+    ],
     "enabledApiProposals": [],
     "activationEvents": [],
     "contributes": {

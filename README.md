@@ -8,6 +8,10 @@ Adding your Anthropic API key directly in Visual Studio Code only allows using C
 
 This extension allows using Claude models from other extensions as well.
 
+## Models
+
+Models are fetched from the Anthropic API, so newer models such as Claude Sonnet 4.6 and Opus 4.8 work automatically, without an extension update.
+
 ## Use in Chat
 
 By default, extension-provided language models are not visible in the chat model picker. Use the `Chat: Manage Language Models` command to list all models, and toggle visibility for the model(s) you want. Afterwards, the models should be available in `Ask` mode.
