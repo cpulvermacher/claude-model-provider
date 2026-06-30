@@ -37,7 +37,7 @@ async function fetchAvailableModels(anthropic: Anthropic) {
     try {
         const modelsResponse = await anthropic.models.list();
 
-        return modelsResponse.data.map((model) => {
+        return modelsResponse.data.map((model: Anthropic.ModelInfo) => {
             // Extract version from model ID (e.g., "claude-sonnet-4-5-20250929" -> "4.5")
             const versionMatch = model.id.match(/claude-\w+-(\d+)-(\d+)/);
             const version = versionMatch
