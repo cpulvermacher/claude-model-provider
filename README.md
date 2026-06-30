@@ -24,9 +24,13 @@ By default, extension-provided language models are not visible in the chat model
 The extension will prompt you to enter your API key when you first use it.
 It's recommended to generate a new key from the [Claude Console](https://platform.claude.com/settings/keys).
 
+To change your key later, run the `Claude Model Provider: Reset API Key` command from the Command Palette.
+
 ## Disclaimer
 
 This extension is not associated with Anthropic. It's an independent project that uses Anthropic's API.
+
+Usage is billed to your own account at standard API rates.
 
 ## Support
 
