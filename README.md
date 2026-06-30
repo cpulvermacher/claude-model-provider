@@ -1,5 +1,8 @@
 # Claude Model Provider Extension for VS Code
 
+[![Latest Release](https://flat.badgen.net/github/release/cpulvermacher/claude-model-provider)](https://github.com/cpulvermacher/claude-model-provider/releases)
+[![License](https://flat.badgen.net/github/license/cpulvermacher/claude-model-provider)](./LICENSE)
+
 This Visual Studio Code extension contributes language models that can be used in the chat view and also by other extensions that allow selecting language models.
 
 ## Why?
