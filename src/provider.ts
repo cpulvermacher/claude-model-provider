@@ -55,7 +55,11 @@ async function fetchAvailableModels(anthropic: Anthropic) {
                 version: version,
                 maxOutputTokens,
                 maxInputTokens,
-                capabilities: {},
+                capabilities: {
+                    toolCalling: true,
+                    imageInput:
+                        model.capabilities?.image_input.supported ?? true,
+                },
             };
         });
     } catch (error) {
