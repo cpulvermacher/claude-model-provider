@@ -55,7 +55,11 @@ async function fetchAvailableModels(anthropic: Anthropic) {
                 version: version,
                 maxOutputTokens,
                 maxInputTokens,
-                capabilities: {},
+                capabilities: {
+                    toolCalling: true,
+                    imageInput:
+                        model.capabilities?.image_input.supported ?? true,
+                },
             };
         });
     } catch (error) {
@@ -79,91 +83,230 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     async provideLanguageModelChatResponse(
         model: vscode.LanguageModelChatInformation,
         messages: readonly vscode.LanguageModelChatRequestMessage[],
-        _options: vscode.ProvideLanguageModelChatResponseOptions,
+        options: vscode.ProvideLanguageModelChatResponseOptions,
         progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-        _token: vscode.CancellationToken
+        token: vscode.CancellationToken
     ): Promise<void> {
-        await new Promise((resolve, reject) => {
-            const concatenatedContent = this.messagesToPrompt(messages);
-            if (concatenatedContent.length === 0) {
-                resolve('');
+        const anthropicMessages = this.convertMessages(messages);
+        if (anthropicMessages.length === 0) {
+            return;
+        }
+
+        const stream = this.anthropic.messages.stream(
+            this.createModelParamsStreaming(model, anthropicMessages, options)
+        );
+
+        // Stream text deltas as they arrive.
+        stream.on('text', (text) => {
+            progress.report(new vscode.LanguageModelTextPart(text));
+        });
+
+        token.onCancellationRequested(() => stream.abort());
+
+        let finalMessage: Anthropic.Message;
+        try {
+            // finalMessage() always settles: it resolves on success and
+            // rejects on error or abort, so the response can never hang.
+            finalMessage = await stream.finalMessage();
+        } catch (error) {
+            if (error instanceof Anthropic.APIUserAbortError) {
                 return;
             }
-            this.anthropic.messages
-                .stream(
-                    this.createModelParamsStreaming(model, concatenatedContent)
-                )
-                .on('text', (text) => {
-                    progress.report(new vscode.LanguageModelTextPart(text));
-                })
-                .on('error', (err) => {
-                    reject(err);
-                })
-                .on('finalMessage', () => {
-                    resolve('');
-                });
-        });
+            throw error;
+        }
+
+        // Text was already streamed above; here we surface any tool calls the
+        // model decided to make.
+        for (const block of finalMessage.content) {
+            if (block.type === 'tool_use') {
+                progress.report(
+                    new vscode.LanguageModelToolCallPart(
+                        block.id,
+                        block.name,
+                        (block.input ?? {}) as object
+                    )
+                );
+            }
+        }
     }
+
     async provideTokenCount(
-        model: vscode.LanguageModelChatInformation,
+        _model: vscode.LanguageModelChatInformation,
         text: string | vscode.LanguageModelChatRequestMessage,
         _token: vscode.CancellationToken
     ): Promise<number> {
-        const prompt = this.messageToPrompt(text);
+        // VS Code calls this very frequently while budgeting the prompt, so it
+        // must be cheap and local. A network round-trip per call (the API's
+        // messages.countTokens) makes chat appear to hang for minutes. We
+        // approximate instead: ~4 characters per token, which is accurate
+        // enough for context-window budgeting.
+        const content =
+            typeof text === 'string' ? text : this.partsToText(text.content);
+        return Math.ceil(content.length / 4);
+    }
 
-        if (prompt.length === 0) {
-            return 0;
-        }
-
-        const response = await this.anthropic.messages.countTokens({
-            messages: this.createMessages(prompt),
-            model: model.id,
-        });
-        if (!response) {
-            throw new Error('Failed to count tokens.');
-        }
-
-        return response.input_tokens;
+    private partsToText(parts: ReadonlyArray<unknown>): string {
+        return parts
+            .map((part) => {
+                if (part instanceof vscode.LanguageModelTextPart) {
+                    return part.value;
+                }
+                if (part instanceof vscode.LanguageModelToolCallPart) {
+                    return part.name + JSON.stringify(part.input);
+                }
+                if (part instanceof vscode.LanguageModelToolResultPart) {
+                    return this.partsToText(part.content);
+                }
+                // image data parts are billed as tokens, but we can't size
+                // them locally; ignore for the text estimate.
+                return '';
+            })
+            .join('');
     }
 
     private createModelParamsStreaming(
         model: vscode.LanguageModelChatInformation,
-        userPrompt: string
+        messages: Anthropic.MessageParam[],
+        options: vscode.ProvideLanguageModelChatResponseOptions
     ): Anthropic.MessageCreateParamsStreaming {
+        const tools = this.convertTools(options.tools);
         return {
-            messages: this.createMessages(userPrompt),
+            messages,
             stream: true,
             model: model.id,
             max_tokens: model.maxOutputTokens,
+            ...(tools && {
+                tools,
+                tool_choice:
+                    options.toolMode ===
+                    vscode.LanguageModelChatToolMode.Required
+                        ? { type: 'any' }
+                        : { type: 'auto' },
+            }),
         };
     }
 
-    private createMessages(userPrompt: string): Anthropic.MessageParam[] {
-        return [{ role: 'user', content: userPrompt }];
-    }
-
-    private messagesToPrompt(
-        messages: readonly vscode.LanguageModelChatRequestMessage[]
-    ): string {
-        return messages.map((msg) => this.messageToPrompt(msg)).join(' ');
-    }
-
-    private messageToPrompt(
-        message: string | vscode.LanguageModelChatRequestMessage
-    ): string {
-        if (typeof message === 'string') {
-            return message;
+    private convertTools(
+        tools: readonly vscode.LanguageModelChatTool[] | undefined
+    ): Anthropic.Tool[] | undefined {
+        if (!tools || tools.length === 0) {
+            return undefined;
         }
 
-        return message.content
-            .map((msg) => {
-                if (msg instanceof vscode.LanguageModelTextPart) {
-                    return msg.value;
-                } else {
-                    // for tool result/call parts, estimate the token count
-                    return JSON.stringify(msg);
+        return tools.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            input_schema: (tool.inputSchema as Anthropic.Tool.InputSchema) ?? {
+                type: 'object',
+            },
+        }));
+    }
+
+    private convertMessages(
+        messages: readonly vscode.LanguageModelChatRequestMessage[]
+    ): Anthropic.MessageParam[] {
+        const result: Anthropic.MessageParam[] = [];
+
+        for (const message of messages) {
+            const role =
+                message.role === vscode.LanguageModelChatMessageRole.Assistant
+                    ? 'assistant'
+                    : 'user';
+            const content = this.convertContentParts(message.content);
+            if (content.length === 0) {
+                continue;
+            }
+
+            // The Anthropic API requires roles to alternate, so merge
+            // consecutive messages that share the same role.
+            const previous = result[result.length - 1];
+            if (previous && previous.role === role) {
+                (previous.content as Anthropic.ContentBlockParam[]).push(
+                    ...content
+                );
+            } else {
+                result.push({ role, content });
+            }
+        }
+
+        return result;
+    }
+
+    private convertContentParts(
+        parts: ReadonlyArray<unknown>
+    ): Anthropic.ContentBlockParam[] {
+        const blocks: Anthropic.ContentBlockParam[] = [];
+
+        for (const part of parts) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                if (part.value.length > 0) {
+                    blocks.push({ type: 'text', text: part.value });
                 }
-            })
-            .join(' ');
+            } else if (part instanceof vscode.LanguageModelToolCallPart) {
+                blocks.push({
+                    type: 'tool_use',
+                    id: part.callId,
+                    name: part.name,
+                    input: part.input,
+                });
+            } else if (part instanceof vscode.LanguageModelToolResultPart) {
+                blocks.push({
+                    type: 'tool_result',
+                    tool_use_id: part.callId,
+                    content: this.convertToolResultContent(part.content),
+                });
+            } else if (part instanceof vscode.LanguageModelDataPart) {
+                const block = this.convertDataPart(part);
+                if (block) {
+                    blocks.push(block);
+                }
+            }
+        }
+
+        return blocks;
+    }
+
+    private convertToolResultContent(
+        parts: ReadonlyArray<unknown>
+    ): Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> {
+        const blocks: Array<
+            Anthropic.TextBlockParam | Anthropic.ImageBlockParam
+        > = [];
+
+        for (const part of parts) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                blocks.push({ type: 'text', text: part.value });
+            } else if (part instanceof vscode.LanguageModelDataPart) {
+                const block = this.convertDataPart(part);
+                if (block) {
+                    blocks.push(block);
+                }
+            }
+        }
+
+        // tool_result content must not be empty
+        if (blocks.length === 0) {
+            blocks.push({ type: 'text', text: '' });
+        }
+
+        return blocks;
+    }
+
+    private convertDataPart(
+        part: vscode.LanguageModelDataPart
+    ): Anthropic.ImageBlockParam | undefined {
+        if (!part.mimeType.startsWith('image/')) {
+            return undefined;
+        }
+
+        return {
+            type: 'image',
+            source: {
+                type: 'base64',
+                media_type:
+                    part.mimeType as Anthropic.Base64ImageSource['media_type'],
+                data: Buffer.from(part.data).toString('base64'),
+            },
+        };
     }
 }
