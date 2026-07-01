@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.4.0] (pre-release)
+
+- Add tool calling support, to fix using the models within the Chat sidebar. Models can now be used in Ask, Agent, or Plan mode.
+- Add image input support.
+
 ## [0.3.4]
 
 - Use token limits reported by the API instead of hardcoded values per model family. Newer models such as Claude Sonnet 4.6 and Opus 4.8 now allow up to 872,000 input tokens.
