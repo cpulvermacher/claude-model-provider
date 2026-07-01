@@ -9,15 +9,17 @@ This Visual Studio Code extension contributes language models that can be used i
 
 Adding your Anthropic API key directly in Visual Studio Code only allows using Claude models from the Chat sidebar. Trying to use the models from another extension will produce `system: text content blocks must be non-empty` errors.
 
-This extension allows using Claude models from other extensions as well.
+This extension allows using Claude models from other extensions like [LGTM](https://marketplace.visualstudio.com/items?itemName=cpulvermacher.lgtm) as well.
 
 ## Models
 
-Models are fetched from the Anthropic API, so newer models such as Claude Sonnet 4.6 and Opus 4.8 work automatically, without an extension update.
+Models are fetched from the Anthropic API, so newer models such as Claude Opus 4.8 and Sonnet 5 are available automatically, without an extension update.
 
 ## Use in Chat
 
-By default, extension-provided language models are not visible in the chat model picker. Use the `Chat: Manage Language Models` command to list all models, and toggle visibility for the model(s) you want. Afterwards, the models should be available in `Ask` mode.
+Extension-provided language models may not be visible in the chat model picker. Use the `Chat: Manage Language Models` command to list all models, and toggle visibility for the model(s) you want.
+
+Note: If you only want to use Claude in the Chat view, you don't need this extension. Visual Studio Code's built-in "bring your own key" (BYOK) support should work. (Open the `Chat: Manage Language Models` command and click `Add Models > Anthropic`)
 
 ## Setup
 
