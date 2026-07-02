@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.4.1]
+Same as 0.4.0.
+
 ## [0.4.0] (pre-release)
 
 - Add tool calling support, to fix using the models within the Chat sidebar. Models can now be used in Ask, Agent, or Plan mode.
