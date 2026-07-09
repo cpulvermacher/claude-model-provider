@@ -40,7 +40,17 @@
                 "command": "claude-model-provider.resetApiKey",
                 "title": "Claude Model Provider: Reset API Key"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Claude Model Provider",
+            "properties": {
+                "claude-model-provider.promptCaching": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Cache the request prefix for 5min using Anthropic API's [prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching). Later turns in a conversation re-read the cached prefix at reduced cost. If you are mainly sending single requests, rather than multi-turn conversations, you may want to turn this off."
+                }
+            }
+        }
     },
     "main": "./out/extension.js",
     "scripts": {

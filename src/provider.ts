@@ -170,11 +170,18 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         options: vscode.ProvideLanguageModelChatResponseOptions
     ): Anthropic.MessageCreateParamsStreaming {
         const tools = this.convertTools(options.tools);
+        const promptCaching = vscode.workspace
+            .getConfiguration('claude-model-provider')
+            .get<boolean>('promptCaching', true);
         return {
             messages,
             stream: true,
             model: model.id,
             max_tokens: model.maxOutputTokens,
+            // enable automatic caching of the request prefix at block level
+            ...(promptCaching && {
+                cache_control: { type: 'ephemeral' },
+            }),
             ...(tools && {
                 tools,
                 tool_choice:
