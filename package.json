@@ -62,7 +62,7 @@
         "watch": "tsc -watch -p ./"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "^0.100.1"
+        "@anthropic-ai/sdk": "^0.110.0"
     },
     "devDependencies": {
         "@biomejs/biome": "2.4.16",
