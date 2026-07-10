@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.5.0] (pre-release)
+
+- Enable Anthropic prompt caching for the request prefix (tool definitions and prior messages), reducing cost on multi-turn conversations. Can be disabled via the `Claude-model-provider: Prompt Caching` setting.
+- Update Anthropic API SDK to 0.110.0.
+
 ## [0.4.1]
 Same as 0.4.0.
 
