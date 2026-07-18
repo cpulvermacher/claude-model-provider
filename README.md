@@ -28,6 +28,10 @@ It's recommended to generate a new key from the [Claude Console](https://platfor
 
 To change your key later, run the `Claude Model Provider: Reset API Key` command from the Command Palette.
 
+## Settings
+
+- `Claude-model-provider: Prompt Caching` (default: enabled): caches the request prefix (tool definitions and prior messages) via Anthropic's [prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching), so later turns in a conversation re-read the cached prefix at reduced cost. If you mainly send single requests rather than multi-turn conversations, this can moderately increase costs and you may want to turn this off.
+
 ## Disclaimer
 
 This extension is not associated with Anthropic. It's an independent project that uses Anthropic's API.
