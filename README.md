@@ -21,6 +21,38 @@ Extension-provided language models may not be visible in the chat model picker. 
 
 Note: If you only want to use Claude in the Chat view, you don't need this extension. Visual Studio Code's built-in "bring your own key" (BYOK) support should work. (Open the `Chat: Manage Language Models` command and click `Add Models > Anthropic`)
 
+## Use from another extension
+
+Any extension can send requests to these models through VS Code's [Language Model API](https://code.visualstudio.com/api/extension-guides/language-model) (`vscode.lm`), without depending on this extension directly.
+
+Select a model with a [chat model selector](https://code.visualstudio.com/api/references/vscode-api#LanguageModelChatSelector), then stream a response:
+
+```ts
+import * as vscode from 'vscode';
+
+const [model] = await vscode.lm.selectChatModels({
+    vendor: 'claude-model-provider', // omit to allow any provider
+    // family: 'claude',
+    // id: 'claude-sonnet-4-5-20250929',
+});
+if (!model) {
+    return; // extension not installed, or no models available
+}
+
+const messages = [
+    vscode.LanguageModelChatMessage.User('Explain this code: ...'),
+];
+const response = await model.sendRequest(messages, {}, cancelToken);
+for await (const chunk of response.text) {
+    // chunk is of type `string`
+}
+```
+
+Notes:
+
+- The user is asked for consent the first time your extension sends a request. Pass `justification` in the request options to explain why you need access.
+- Tool calling is supported: pass `tools` in the request options, and handle `LanguageModelToolCallPart` items from `response.stream` (rather than `response.text`, which yields text only). See [Tool calling](https://code.visualstudio.com/api/extension-guides/ai/language-model#tool-calling).
+
 ## Setup
 
 The extension will prompt you to enter your API key when you first use it.
