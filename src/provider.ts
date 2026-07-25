@@ -135,11 +135,14 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         text: string | vscode.LanguageModelChatRequestMessage,
         _token: vscode.CancellationToken
     ): Promise<number> {
-        // VS Code calls this very frequently while budgeting the prompt, so it
-        // must be cheap and local. A network round-trip per call (the API's
+        // In a chat session, VS Code calls this thousands of times for even
+        // the smallest inputs, so we need a cheap and local version.
+        // A network round-trip per call (the API's
         // messages.countTokens) makes chat appear to hang for minutes. We
         // approximate instead: ~4 characters per token, which is accurate
         // enough for context-window budgeting.
+        // Note: this happens only in chat, not for direct requests via the vscode.lm
+        // API.
         const content =
             typeof text === 'string' ? text : this.partsToText(text.content);
         return Math.ceil(content.length / 4);
