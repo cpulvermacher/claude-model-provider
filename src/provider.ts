@@ -147,15 +147,21 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         // VS Code calls this thousands of times per chat session, so the
         // common path stays local; only estimates near the input budget are
         // worth a network round-trip.
-        const content =
-            typeof text === 'string' ? text : this.partsToText(text.content);
-        const estimate = Math.ceil(
-            content.length / ChatModelProvider.CHARS_PER_TOKEN
+        const blocks =
+            typeof text === 'string'
+                ? [{ type: 'text' as const, text }]
+                : this.toCountableBlocks(text.content);
+        const chars = blocks.reduce(
+            (n, block) => n + (block.type === 'text' ? block.text.length : 0),
+            0
         );
+        const estimate = Math.ceil(chars / ChatModelProvider.CHARS_PER_TOKEN);
 
+        // Images contribute no characters, so the estimate cannot see them.
+        const hasImage = blocks.some((block) => block.type === 'image');
         const threshold =
             model.maxInputTokens * ChatModelProvider.EXACT_COUNT_FRACTION;
-        if (estimate <= threshold) {
+        if (blocks.length === 0 || (!hasImage && estimate <= threshold)) {
             return estimate;
         }
 
@@ -165,7 +171,10 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         );
         try {
             const count = await this.anthropic.messages.countTokens(
-                { model: model.id, messages: [{ role: 'user', content }] },
+                {
+                    model: model.id,
+                    messages: [{ role: 'user', content: blocks }],
+                },
                 { signal: controller.signal }
             );
             return count.input_tokens;
@@ -177,23 +186,37 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         }
     }
 
-    private partsToText(parts: ReadonlyArray<unknown>): string {
-        return parts
-            .map((part) => {
-                if (part instanceof vscode.LanguageModelTextPart) {
-                    return part.value;
+    // tool_use/tool_result blocks would need their counterparts to form a
+    // valid request, so they are flattened to their text rendering; images
+    // are the reason to ask the API at all and stay exact.
+    private toCountableBlocks(
+        parts: ReadonlyArray<unknown>
+    ): Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> {
+        const blocks: Array<
+            Anthropic.TextBlockParam | Anthropic.ImageBlockParam
+        > = [];
+
+        for (const part of parts) {
+            if (part instanceof vscode.LanguageModelTextPart) {
+                if (part.value.length > 0) {
+                    blocks.push({ type: 'text', text: part.value });
                 }
-                if (part instanceof vscode.LanguageModelToolCallPart) {
-                    return part.name + JSON.stringify(part.input);
+            } else if (part instanceof vscode.LanguageModelToolCallPart) {
+                blocks.push({
+                    type: 'text',
+                    text: part.name + JSON.stringify(part.input),
+                });
+            } else if (part instanceof vscode.LanguageModelToolResultPart) {
+                blocks.push(...this.toCountableBlocks(part.content));
+            } else if (part instanceof vscode.LanguageModelDataPart) {
+                const block = this.convertDataPart(part);
+                if (block) {
+                    blocks.push(block);
                 }
-                if (part instanceof vscode.LanguageModelToolResultPart) {
-                    return this.partsToText(part.content);
-                }
-                // image data parts are billed as tokens, but we can't size
-                // them locally; ignore for the text estimate.
-                return '';
-            })
-            .join('');
+            }
+        }
+
+        return blocks;
     }
 
     private createModelParamsStreaming(

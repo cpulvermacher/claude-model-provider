@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.5.1] (pre-release)
+- Use accurate token count for larger inputs (>60% of input token maximum), quick estimate for smaller.
+- Fix token count for image data.
+
 ## [0.5.0] (pre-release)
 
 - Enable Anthropic prompt caching for the request prefix (tool definitions and prior messages), reducing cost on multi-turn conversations. Can be disabled via the `Claude-model-provider: Prompt Caching` setting.
