@@ -68,6 +68,15 @@ async function fetchAvailableModels(anthropic: Anthropic) {
 }
 
 export class ChatModelProvider implements vscode.LanguageModelChatProvider {
+    // ~4 chars/token on prose but ~2.5 on dense source; estimating low is
+    // deliberate, since undercounting breaks a caller's budgeting while
+    // overcounting only wastes context.
+    private static readonly CHARS_PER_TOKEN = 3.5;
+
+    // An estimate at this fraction still fits the real budget down to 2.1
+    // chars/token (0.6 * 3.5 / 2.1 = 1).
+    private static readonly EXACT_COUNT_FRACTION = 0.6;
+
     constructor(
         private anthropic: Anthropic,
         private availableModels: vscode.LanguageModelChatInformation[] = []
@@ -131,21 +140,41 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     }
 
     async provideTokenCount(
-        _model: vscode.LanguageModelChatInformation,
+        model: vscode.LanguageModelChatInformation,
         text: string | vscode.LanguageModelChatRequestMessage,
-        _token: vscode.CancellationToken
+        token: vscode.CancellationToken
     ): Promise<number> {
-        // In a chat session, VS Code calls this thousands of times for even
-        // the smallest inputs, so we need a cheap and local version.
-        // A network round-trip per call (the API's
-        // messages.countTokens) makes chat appear to hang for minutes. We
-        // approximate instead: ~4 characters per token, which is accurate
-        // enough for context-window budgeting.
-        // Note: this happens only in chat, not for direct requests via the vscode.lm
-        // API.
+        // VS Code calls this thousands of times per chat session, so the
+        // common path stays local; only estimates near the input budget are
+        // worth a network round-trip.
         const content =
             typeof text === 'string' ? text : this.partsToText(text.content);
-        return Math.ceil(content.length / 4);
+        const estimate = Math.ceil(
+            content.length / ChatModelProvider.CHARS_PER_TOKEN
+        );
+
+        const threshold =
+            model.maxInputTokens * ChatModelProvider.EXACT_COUNT_FRACTION;
+        if (estimate <= threshold) {
+            return estimate;
+        }
+
+        const controller = new AbortController();
+        const cancellation = token.onCancellationRequested(() =>
+            controller.abort()
+        );
+        try {
+            const count = await this.anthropic.messages.countTokens(
+                { model: model.id, messages: [{ role: 'user', content }] },
+                { signal: controller.signal }
+            );
+            return count.input_tokens;
+        } catch {
+            // a budgeting caller needs a number, not an exception
+            return estimate;
+        } finally {
+            cancellation.dispose();
+        }
     }
 
     private partsToText(parts: ReadonlyArray<unknown>): string {
