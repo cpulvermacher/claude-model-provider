@@ -9,5 +9,6 @@
         "strict": true,
         "outDir": "out",
         "skipLibCheck": true
-    }
+    },
+    "include": ["src"]
 }
