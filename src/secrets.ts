@@ -19,8 +19,6 @@ export async function promptAndStoreApiKey(context: vscode.ExtensionContext) {
     return apiKey;
 }
 
-export async function resetApiKey(context: vscode.ExtensionContext) {
-    await context.secrets.delete('claude.apiKey');
-
+export async function updateApiKey(context: vscode.ExtensionContext) {
     await promptAndStoreApiKey(context);
 }

@@ -58,7 +58,7 @@ Notes:
 The extension will prompt you to enter your API key when you first use it.
 It's recommended to generate a new key from the [Claude Console](https://platform.claude.com/settings/keys).
 
-To change your key later, run the `Claude Model Provider: Reset API Key` command from the Command Palette.
+To change your key later, run the `Claude Model Provider: Update API Key` command from the Command Palette.
 
 ## Settings
 

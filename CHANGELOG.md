@@ -1,8 +1,9 @@
 # Change Log
 
-## [0.5.1] (pre-release)
+## [0.6.0] (pre-release)
 - Use accurate token count for larger inputs (>60% of input token maximum), quick estimate for smaller.
 - Fix token count for image data.
+- Rename Reset API Key command to Update API Key and avoid deleting existing if no new key is entered.
 
 ## [0.5.0] (pre-release)
 

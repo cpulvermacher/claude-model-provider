@@ -1,7 +1,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-import { getApiKey, promptAndStoreApiKey, resetApiKey } from './secrets';
+import { getApiKey, promptAndStoreApiKey, updateApiKey } from './secrets';
 
 export async function initializeProvider(context: vscode.ExtensionContext) {
     let apiKey = await getApiKey(context);
@@ -15,16 +15,16 @@ export async function initializeProvider(context: vscode.ExtensionContext) {
         anthropic = new Anthropic({ apiKey });
         availableModels = await fetchAvailableModels(anthropic);
     } catch (error) {
-        const resetApiKeyAction = 'Reset API Key';
+        const updateApiKeyAction = 'Update API Key';
         const abortAction = 'Abort';
         const action = await vscode.window.showErrorMessage(
             `Failed to initialize Anthropic client: ${error}`,
-            resetApiKeyAction,
+            updateApiKeyAction,
             abortAction
         );
 
-        if (action === resetApiKeyAction) {
-            await resetApiKey(context);
+        if (action === updateApiKeyAction) {
+            await updateApiKey(context);
             return await initializeProvider(context);
         }
         throw error;

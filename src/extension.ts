@@ -1,21 +1,21 @@
 import * as vscode from 'vscode';
 
 import { initializeProvider } from './provider';
-import { resetApiKey } from './secrets';
+import { updateApiKey } from './secrets';
 
 export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand(
-            'claude-model-provider.resetApiKey',
+            'claude-model-provider.updateApiKey',
             async () => {
                 try {
-                    await resetApiKey(context);
+                    await updateApiKey(context);
                     vscode.window.showInformationMessage(
                         'API key updated successfully. Please reload the window for changes to take effect.'
                     );
                 } catch {
                     vscode.window.showWarningMessage(
-                        'API key reset cancelled.'
+                        'API key update cancelled.'
                     );
                 }
             }

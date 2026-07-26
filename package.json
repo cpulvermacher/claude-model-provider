@@ -37,8 +37,8 @@
         ],
         "commands": [
             {
-                "command": "claude-model-provider.resetApiKey",
-                "title": "Claude Model Provider: Reset API Key"
+                "command": "claude-model-provider.updateApiKey",
+                "title": "Claude Model Provider: Update API Key"
             }
         ],
         "configuration": {
