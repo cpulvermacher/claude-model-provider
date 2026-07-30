@@ -1,3 +1,5 @@
+minimumReleaseAge: 4320
+
 allowBuilds:
   '@vscode/vsce-sign': false
   keytar: false
