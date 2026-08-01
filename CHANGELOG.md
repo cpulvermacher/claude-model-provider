@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.6.1]
+Same as 0.6.0.
+
+Breaking change compared to last stable release 0.4.1:
+Enables prompt caching for the request prefix, which greatly reduces costs on multi-turn conversions, but somewhat *increases* costs for single-shot use.
+If you mainly use this provider for sending single requests from the other extensions, it may be better to disable the `Claude-model-provider: Prompt Caching` setting.
+
 ## [0.6.0] (pre-release)
 - Use accurate token count for larger inputs (>60% of input token maximum), quick estimate for smaller.
 - Fix token count for image data.
