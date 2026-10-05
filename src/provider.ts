@@ -117,6 +117,18 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
             throw error;
         }
 
+        // A safety classifier declined the request. This arrives as a normal
+        // response with no (or truncated) content, so surface it as an error
+        // instead of letting it look like an empty answer.
+        if (finalMessage.stop_reason === 'refusal') {
+            const details = finalMessage.stop_details;
+            throw new Error(
+                `${model.name} declined the request ` +
+                    `(category: ${details?.category ?? 'unknown'}). ` +
+                    (details?.explanation ?? '')
+            );
+        }
+
         // Text was already streamed above; here we surface any tool calls the
         // model decided to make.
         for (const block of finalMessage.content) {

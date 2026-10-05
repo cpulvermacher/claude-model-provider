@@ -41,3 +41,14 @@ export enum LanguageModelChatMessageRole {
     User = 1,
     Assistant = 2,
 }
+
+export enum LanguageModelChatToolMode {
+    Auto = 1,
+    Required = 2,
+}
+
+export const workspace = {
+    getConfiguration: () => ({
+        get: <T>(_key: string, defaultValue: T) => defaultValue,
+    }),
+};
