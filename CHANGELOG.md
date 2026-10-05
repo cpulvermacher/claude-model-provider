@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.6.2] (pre-release)
+- Update Anthropic API SDK to 0.131.0.
+
 ## [0.6.1]
 Same as 0.6.0.
 
