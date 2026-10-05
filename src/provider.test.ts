@@ -73,6 +73,25 @@ describe('provideLanguageModelChatResponse', () => {
         );
     });
 
+    it('appends a marker when the output limit is hit', async () => {
+        const provider = createProvider(
+            { stop_reason: 'max_tokens', stop_details: null, content: [] },
+            ['truncated']
+        );
+        const { response, progress } = respond(provider);
+
+        await expect(response).resolves.toBeUndefined();
+        expect(progress.report.mock.calls).toEqual([
+            [new vscode.LanguageModelTextPart('truncated')],
+            [
+                new vscode.LanguageModelTextPart(
+                    '\n\n[Response truncated: reached the ' +
+                        '64000-token output limit.]'
+                ),
+            ],
+        ]);
+    });
+
     it('throws with the category and explanation on a refusal', async () => {
         const provider = createProvider(
             {

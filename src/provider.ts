@@ -129,6 +129,18 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
             );
         }
 
+        // The response hit the output limit (which includes thinking) and was
+        // cut off. What was streamed is still usable, so append a marker
+        // rather than failing the request.
+        if (finalMessage.stop_reason === 'max_tokens') {
+            progress.report(
+                new vscode.LanguageModelTextPart(
+                    `\n\n[Response truncated: reached the ` +
+                        `${model.maxOutputTokens}-token output limit.]`
+                )
+            );
+        }
+
         // Text was already streamed above; here we surface any tool calls the
         // model decided to make.
         for (const block of finalMessage.content) {
