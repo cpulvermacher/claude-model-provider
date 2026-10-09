@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.6.3]
+Same as 0.6.2.
+
 ## [0.6.2] (pre-release)
 - Throw error on safety refusals from Fable, Opus 5+, or Sonnet 5.5+. Previously an empty response was returned.
 - Append a visible `[Response truncated: ...]` marker when a response hits the output token limit.
