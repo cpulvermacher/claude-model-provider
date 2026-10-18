@@ -48,6 +48,40 @@
                     "type": "boolean",
                     "default": true,
                     "markdownDescription": "Cache the request prefix for 5min using Anthropic API's [prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching). Later turns in a conversation re-read the cached prefix at reduced cost. If you are mainly sending single requests, rather than multi-turn conversations, you may want to turn this off."
+                },
+                "claude-model-provider.thinking": {
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "adaptive"
+                    ],
+                    "enumDescriptions": [
+                        "Use the model's default. Newer models (e.g. Opus 5 and later, Sonnet 5 and later) think by default, older ones (e.g. Opus 4.8) don't.",
+                        "Enable adaptive thinking on all models that support it: Claude decides when and how much to think."
+                    ],
+                    "default": "default",
+                    "markdownDescription": "Controls [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking). Thinking improves results on complex tasks, but increases cost and latency. Thinking tokens are billed as output tokens. Not applied when a caller forces tool use. Can be overridden per request by passing `thinking` in `modelOptions`."
+                },
+                "claude-model-provider.effort": {
+                    "type": "string",
+                    "enum": [
+                        "default",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                    ],
+                    "enumDescriptions": [
+                        "Use the model's default effort level.",
+                        "Fastest and cheapest. Good for simple tasks.",
+                        "Balanced speed and quality.",
+                        "Thorough. Recommended minimum for complex tasks.",
+                        "Recommended for most coding and agentic tasks on newer models.",
+                        "Highest quality, at the highest cost."
+                    ],
+                    "default": "default",
+                    "markdownDescription": "How much effort Claude spends on a response, including how deeply it thinks. Higher effort generally gives better results but uses more tokens. Ignored for models that don't support effort; levels a model doesn't support fall back to the closest lower one. Can be overridden per request by passing `effort` in `modelOptions`."
                 }
             }
         }

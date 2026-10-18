@@ -51,6 +51,7 @@ for await (const chunk of response.text) {
 Notes:
 
 - The user is asked for consent the first time your extension sends a request. Pass `justification` in the request options to explain why you need access.
+- Thinking and effort can be set per request via `modelOptions`, overriding the user's settings. For example, `{ modelOptions: { effort: 'low' } }` for simple tasks, or `{ modelOptions: { thinking: 'adaptive', effort: 'high' } }` for complex ones. Accepted values are the same as for the settings below.
 - Tool calling is supported: pass `tools` in the request options, and handle `LanguageModelToolCallPart` items from `response.stream` (rather than `response.text`, which yields text only). See [Tool calling](https://code.visualstudio.com/api/extension-guides/ai/language-model#tool-calling).
 
 ## Setup
@@ -63,6 +64,9 @@ To change your key later, run the `Claude Model Provider: Update API Key` comman
 ## Settings
 
 - `Claude-model-provider: Prompt Caching` (default: enabled): caches the request prefix (tool definitions and prior messages) via Anthropic's [prompt caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching), so later turns in a conversation re-read the cached prefix at reduced cost. If you mainly send single requests rather than multi-turn conversations, this can moderately increase costs and you may want to turn this off.
+
+- `Claude-model-provider: Thinking` (default: `default`): set to `adaptive` to enable [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) on all models that support it. Newer models (e.g. Opus 5 and later) already think by default; this mainly matters for older ones like Opus 4.8. Thinking improves results on complex tasks, but increases cost and latency.
+- `Claude-model-provider: Effort` (default: `default`): how much effort Claude spends on a response (`low`, `medium`, `high`, `xhigh`, `max`). Higher effort generally gives better results but uses more tokens. If a model doesn't support the chosen level, the closest lower one is used.
 
 ## Disclaimer
 

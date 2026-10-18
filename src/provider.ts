@@ -2,6 +2,14 @@ import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
 import { convertDataPart } from './content';
+import {
+    createReasoningParams,
+    type Effort,
+    getReasoningCapabilities,
+    type ReasoningCapabilities,
+    resolveReasoningSettings,
+    type ThinkingMode,
+} from './reasoning';
 import { getApiKey, promptAndStoreApiKey, updateApiKey } from './secrets';
 import { countTokens } from './tokenCount';
 
@@ -12,10 +20,10 @@ export async function initializeProvider(context: vscode.ExtensionContext) {
     }
 
     let anthropic: Anthropic;
-    let availableModels: vscode.LanguageModelChatInformation[];
+    let models: Anthropic.ModelInfo[];
     try {
         anthropic = new Anthropic({ apiKey });
-        availableModels = await fetchAvailableModels(anthropic);
+        models = await fetchModels(anthropic);
     } catch (error) {
         const updateApiKeyAction = 'Update API Key';
         const abortAction = 'Abort';
@@ -32,47 +40,59 @@ export async function initializeProvider(context: vscode.ExtensionContext) {
         throw error;
     }
 
-    return new ChatModelProvider(anthropic, availableModels);
+    const reasoningCapabilities = new Map(
+        models.map((model) => [
+            model.id,
+            getReasoningCapabilities(model.capabilities),
+        ])
+    );
+    return new ChatModelProvider(
+        anthropic,
+        models.map(toChatInformation),
+        reasoningCapabilities
+    );
 }
 
-async function fetchAvailableModels(anthropic: Anthropic) {
+async function fetchModels(anthropic: Anthropic) {
     try {
         const modelsResponse = await anthropic.models.list();
-
-        return modelsResponse.data.map((model: Anthropic.ModelInfo) => {
-            // Extract version from model ID (e.g., "claude-sonnet-4-5-20250929" -> "4.5")
-            const versionMatch = model.id.match(/claude-\w+-(\d+)-(\d+)/);
-            const version = versionMatch
-                ? `${versionMatch[1]}.${versionMatch[2]}`
-                : '1.0';
-
-            const maxOutputTokens = model.max_tokens ?? 64000;
-            const maxInputTokens =
-                (model.max_input_tokens ?? 200000) - maxOutputTokens;
-
-            return {
-                id: model.id,
-                name: model.display_name,
-                family: 'claude',
-                version: version,
-                maxOutputTokens,
-                maxInputTokens,
-                capabilities: {
-                    toolCalling: true,
-                    imageInput:
-                        model.capabilities?.image_input.supported ?? true,
-                },
-            };
-        });
+        return modelsResponse.data;
     } catch (error) {
         throw new Error(`Failed to fetch models: ${error}`);
     }
 }
 
+function toChatInformation(
+    model: Anthropic.ModelInfo
+): vscode.LanguageModelChatInformation {
+    // Extract version from model ID (e.g., "claude-sonnet-4-5-20250929" -> "4.5")
+    const versionMatch = model.id.match(/claude-\w+-(\d+)-(\d+)/);
+    const version = versionMatch
+        ? `${versionMatch[1]}.${versionMatch[2]}`
+        : '1.0';
+
+    const maxOutputTokens = model.max_tokens ?? 64000;
+    const maxInputTokens = (model.max_input_tokens ?? 200000) - maxOutputTokens;
+
+    return {
+        id: model.id,
+        name: model.display_name,
+        family: 'claude',
+        version: version,
+        maxOutputTokens,
+        maxInputTokens,
+        capabilities: {
+            toolCalling: true,
+            imageInput: model.capabilities?.image_input.supported ?? true,
+        },
+    };
+}
+
 export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     constructor(
         private anthropic: Anthropic,
-        private availableModels: vscode.LanguageModelChatInformation[] = []
+        private availableModels: vscode.LanguageModelChatInformation[] = [],
+        private reasoningCapabilities = new Map<string, ReasoningCapabilities>()
     ) {}
 
     async provideLanguageModelChatInformation(
@@ -170,25 +190,41 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         options: vscode.ProvideLanguageModelChatResponseOptions
     ): Anthropic.MessageCreateParamsStreaming {
         const tools = this.convertTools(options.tools);
-        const promptCaching = vscode.workspace
-            .getConfiguration('claude-model-provider')
-            .get<boolean>('promptCaching', true);
+        const forcedToolUse =
+            !!tools &&
+            options.toolMode === vscode.LanguageModelChatToolMode.Required;
+        const config = vscode.workspace.getConfiguration(
+            'claude-model-provider'
+        );
+        const promptCaching = config.get<boolean>('promptCaching', true);
+        const reasoningSettings = resolveReasoningSettings(
+            {
+                thinking: config.get<ThinkingMode>('thinking', 'default'),
+                effort: config.get<Effort | 'default'>('effort', 'default'),
+            },
+            options.modelOptions
+        );
+        const reasoningParams = createReasoningParams(
+            this.reasoningCapabilities.get(model.id) ?? {
+                adaptiveThinking: false,
+                effortLevels: [],
+            },
+            reasoningSettings,
+            forcedToolUse
+        );
         return {
             messages,
             stream: true,
             model: model.id,
             max_tokens: model.maxOutputTokens,
+            ...reasoningParams,
             // enable automatic caching of the request prefix at block level
             ...(promptCaching && {
                 cache_control: { type: 'ephemeral' },
             }),
             ...(tools && {
                 tools,
-                tool_choice:
-                    options.toolMode ===
-                    vscode.LanguageModelChatToolMode.Required
-                        ? { type: 'any' }
-                        : { type: 'auto' },
+                tool_choice: forcedToolUse ? { type: 'any' } : { type: 'auto' },
             }),
         };
     }

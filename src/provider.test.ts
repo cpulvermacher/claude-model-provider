@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 
 import { ChatModelProvider } from './provider';
+import type { ReasoningCapabilities } from './reasoning';
 
 const model: vscode.LanguageModelChatInformation = {
     id: 'claude-test-1-0',
@@ -41,18 +42,35 @@ function createProvider(message: Partial<Anthropic.Message>, texts: string[]) {
         finalMessage: async () => message,
         abort: () => {},
     };
+    const streamFn = vi.fn(
+        (_params: Anthropic.MessageCreateParamsStreaming) => stream
+    );
     const anthropic = {
-        messages: { stream: () => stream },
+        messages: { stream: streamFn },
     } as unknown as Anthropic;
-    return new ChatModelProvider(anthropic, [model]);
+    const reasoningCapabilities = new Map<string, ReasoningCapabilities>([
+        [
+            model.id,
+            { adaptiveThinking: true, effortLevels: ['low', 'medium', 'high'] },
+        ],
+    ]);
+    const provider = new ChatModelProvider(
+        anthropic,
+        [model],
+        reasoningCapabilities
+    );
+    return Object.assign(provider, { streamFn });
 }
 
-function respond(provider: ChatModelProvider) {
+function respond(
+    provider: ChatModelProvider,
+    options = {} as vscode.ProvideLanguageModelChatResponseOptions
+) {
     const progress = { report: vi.fn() };
     const response = provider.provideLanguageModelChatResponse(
         model,
         messages,
-        {} as vscode.ProvideLanguageModelChatResponseOptions,
+        options,
         progress,
         token
     );
@@ -71,6 +89,34 @@ describe('provideLanguageModelChatResponse', () => {
         expect(progress.report).toHaveBeenCalledWith(
             new vscode.LanguageModelTextPart('Hi')
         );
+    });
+
+    it('sends no reasoning params with default settings', async () => {
+        const provider = createProvider(
+            { stop_reason: 'end_turn', stop_details: null, content: [] },
+            []
+        );
+        await respond(provider).response;
+
+        const params = provider.streamFn.mock.calls[0][0];
+        expect(params).not.toHaveProperty('thinking');
+        expect(params).not.toHaveProperty('output_config');
+    });
+
+    it('applies thinking and effort from modelOptions', async () => {
+        const provider = createProvider(
+            { stop_reason: 'end_turn', stop_details: null, content: [] },
+            []
+        );
+        await respond(provider, {
+            modelOptions: { thinking: 'adaptive', effort: 'max' },
+        } as unknown as vscode.ProvideLanguageModelChatResponseOptions)
+            .response;
+
+        expect(provider.streamFn.mock.calls[0][0]).toMatchObject({
+            thinking: { type: 'adaptive' },
+            output_config: { effort: 'high' },
+        });
     });
 
     it('appends a marker when the output limit is hit', async () => {

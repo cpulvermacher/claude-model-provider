@@ -1,5 +1,9 @@
 # Change Log
 
+## [Unreleased]
+- Add `Thinking` setting to enable adaptive thinking on models that support it, and `Effort` setting to control how much effort Claude spends on a response.
+- Allow callers to override thinking and effort per request via `modelOptions`.
+
 ## [0.6.3]
 Same as 0.6.2.
 
