@@ -1,7 +1,13 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-import { convertDataPart } from './content';
+import {
+    convertDataPart,
+    createThinkingPart,
+    parseThinkingPart,
+    THINKING_MIME_TYPE,
+    type ThinkingBlockParam,
+} from './content';
 import {
     createReasoningParams,
     type Effort,
@@ -109,7 +115,7 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         progress: vscode.Progress<vscode.LanguageModelResponsePart>,
         token: vscode.CancellationToken
     ): Promise<void> {
-        const anthropicMessages = this.convertMessages(messages);
+        const anthropicMessages = this.convertMessages(messages, model.id);
         if (anthropicMessages.length === 0) {
             return;
         }
@@ -162,9 +168,15 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         }
 
         // Text was already streamed above; here we surface any tool calls the
-        // model decided to make.
+        // model decided to make, plus thinking blocks so that they come back
+        // with the tool results (see THINKING_MIME_TYPE).
         for (const block of finalMessage.content) {
-            if (block.type === 'tool_use') {
+            if (
+                block.type === 'thinking' ||
+                block.type === 'redacted_thinking'
+            ) {
+                progress.report(createThinkingPart(model.id, block));
+            } else if (block.type === 'tool_use') {
                 progress.report(
                     new vscode.LanguageModelToolCallPart(
                         block.id,
@@ -246,7 +258,8 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
     }
 
     private convertMessages(
-        messages: readonly vscode.LanguageModelChatRequestMessage[]
+        messages: readonly vscode.LanguageModelChatRequestMessage[],
+        modelId: string
     ): Anthropic.MessageParam[] {
         const result: Anthropic.MessageParam[] = [];
 
@@ -255,7 +268,10 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
                 message.role === vscode.LanguageModelChatMessageRole.Assistant
                     ? 'assistant'
                     : 'user';
-            const content = this.convertContentParts(message.content);
+            const content = this.convertContentParts(
+                message.content,
+                role === 'assistant' ? modelId : undefined
+            );
             if (content.length === 0) {
                 continue;
             }
@@ -275,9 +291,16 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         return result;
     }
 
+    /**
+     * `thinkingModel` is the model whose thinking blocks to keep; thinking
+     * from other models (or in user messages) is dropped, since its
+     * signature would be rejected.
+     */
     private convertContentParts(
-        parts: ReadonlyArray<unknown>
+        parts: ReadonlyArray<unknown>,
+        thinkingModel: string | undefined
     ): Anthropic.ContentBlockParam[] {
+        const thinking: ThinkingBlockParam[] = [];
         const blocks: Anthropic.ContentBlockParam[] = [];
 
         for (const part of parts) {
@@ -299,14 +322,24 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
                     content: this.convertToolResultContent(part.content),
                 });
             } else if (part instanceof vscode.LanguageModelDataPart) {
-                const block = convertDataPart(part);
-                if (block) {
-                    blocks.push(block);
+                if (part.mimeType === THINKING_MIME_TYPE) {
+                    const block =
+                        thinkingModel && parseThinkingPart(part, thinkingModel);
+                    if (block) {
+                        thinking.push(block);
+                    }
+                } else {
+                    const block = convertDataPart(part);
+                    if (block) {
+                        blocks.push(block);
+                    }
                 }
             }
         }
 
-        return blocks;
+        // Text is streamed before thinking parts are reported, but the API
+        // expects thinking at the start of the assistant turn.
+        return [...thinking, ...blocks];
     }
 
     private convertToolResultContent(

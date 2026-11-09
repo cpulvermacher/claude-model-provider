@@ -35,6 +35,10 @@ export class LanguageModelDataPart {
     static text(value: string, mime = 'text/plain') {
         return new LanguageModelDataPart(new TextEncoder().encode(value), mime);
     }
+
+    static json(value: unknown, mime = 'text/x-json') {
+        return LanguageModelDataPart.text(JSON.stringify(value), mime);
+    }
 }
 
 export enum LanguageModelChatMessageRole {

@@ -64,12 +64,13 @@ function createProvider(message: Partial<Anthropic.Message>, texts: string[]) {
 
 function respond(
     provider: ChatModelProvider,
-    options = {} as vscode.ProvideLanguageModelChatResponseOptions
+    options = {} as vscode.ProvideLanguageModelChatResponseOptions,
+    requestMessages = messages
 ) {
     const progress = { report: vi.fn() };
     const response = provider.provideLanguageModelChatResponse(
         model,
-        messages,
+        requestMessages,
         options,
         progress,
         token
@@ -174,5 +175,113 @@ describe('provideLanguageModelChatResponse', () => {
         expect(progress.report).toHaveBeenCalledWith(
             new vscode.LanguageModelTextPart('partial')
         );
+    });
+});
+
+describe('thinking blocks', () => {
+    const thinking: Anthropic.ThinkingBlock = {
+        type: 'thinking',
+        thinking: 'Need to read the file.',
+        signature: 'sig',
+    };
+    const toolUse: Anthropic.ToolUseBlock = {
+        type: 'tool_use',
+        id: 'call-1',
+        name: 'read_file',
+        input: { path: 'a.ts' },
+        caller: { type: 'direct' },
+    };
+
+    /** a follow-up request answering `toolUse`, with `history` as the assistant turn */
+    function followUp(history: unknown[]) {
+        return [
+            ...messages,
+            {
+                role: vscode.LanguageModelChatMessageRole.Assistant,
+                content: history,
+                name: undefined,
+            },
+            {
+                role: vscode.LanguageModelChatMessageRole.User,
+                content: [
+                    new vscode.LanguageModelToolResultPart('call-1', [
+                        new vscode.LanguageModelTextPart('contents'),
+                    ]),
+                ],
+                name: undefined,
+            },
+        ] as unknown as vscode.LanguageModelChatRequestMessage[];
+    }
+
+    function sentAssistantContent(provider: ReturnType<typeof createProvider>) {
+        return provider.streamFn.mock.calls[0][0].messages[1].content;
+    }
+
+    it('round-trips thinking in front of the assistant turn', async () => {
+        const first = createProvider(
+            {
+                stop_reason: 'tool_use',
+                stop_details: null,
+                content: [
+                    thinking,
+                    { type: 'text', text: 'Reading.', citations: null },
+                    toolUse,
+                ],
+            },
+            ['Reading.']
+        );
+        const { response, progress } = respond(first);
+        await response;
+        // what a caller stores as the assistant turn, in reported order
+        const history = progress.report.mock.calls.map(([part]) => part);
+        expect(history.map((part) => part.constructor)).toEqual([
+            vscode.LanguageModelTextPart,
+            vscode.LanguageModelDataPart,
+            vscode.LanguageModelToolCallPart,
+        ]);
+
+        const second = createProvider(
+            { stop_reason: 'end_turn', stop_details: null, content: [] },
+            []
+        );
+        await respond(second, undefined, followUp(history)).response;
+
+        expect(sentAssistantContent(second)).toEqual([
+            {
+                type: 'thinking',
+                thinking: 'Need to read the file.',
+                signature: 'sig',
+            },
+            { type: 'text', text: 'Reading.' },
+            {
+                type: 'tool_use',
+                id: 'call-1',
+                name: 'read_file',
+                input: { path: 'a.ts' },
+            },
+        ]);
+    });
+
+    it('drops thinking produced by a different model', async () => {
+        const part = vscode.LanguageModelDataPart.json(
+            { model: 'claude-other-1-0', block: thinking },
+            'application/vnd.claude-model-provider.thinking+json'
+        );
+        const provider = createProvider(
+            { stop_reason: 'end_turn', stop_details: null, content: [] },
+            []
+        );
+        await respond(
+            provider,
+            undefined,
+            followUp([
+                part,
+                new vscode.LanguageModelToolCallPart('call-1', 'read_file', {}),
+            ])
+        ).response;
+
+        expect(sentAssistantContent(provider)).toEqual([
+            { type: 'tool_use', id: 'call-1', name: 'read_file', input: {} },
+        ]);
     });
 });

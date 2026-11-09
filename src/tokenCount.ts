@@ -1,7 +1,7 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import * as vscode from 'vscode';
 
-import { convertDataPart } from './content';
+import { convertDataPart, parseThinkingPart } from './content';
 
 export type CountableBlock =
     | Anthropic.TextBlockParam
@@ -88,9 +88,15 @@ export function toCountableBlocks(
         } else if (part instanceof vscode.LanguageModelToolResultPart) {
             blocks.push(...toCountableBlocks(part.content));
         } else if (part instanceof vscode.LanguageModelDataPart) {
-            const block = convertDataPart(part);
-            if (block) {
-                blocks.push(block);
+            // thinking sent back with tool results counts as input
+            const thinking = parseThinkingPart(part);
+            if (thinking?.type === 'thinking') {
+                blocks.push({ type: 'text', text: thinking.thinking });
+            } else {
+                const block = convertDataPart(part);
+                if (block) {
+                    blocks.push(block);
+                }
             }
         }
     }
