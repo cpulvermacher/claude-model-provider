@@ -152,13 +152,13 @@ describe('createReasoningParams', () => {
         ).toEqual({ output_config: { effort: 'high' } });
     });
 
-    it('falls back to the lowest supported level if none is lower', () => {
+    it('omits effort if no supported level is at or below it', () => {
         expect(
             createReasoningParams(
                 { adaptiveThinking: true, effortLevels: ['medium', 'high'] },
                 { thinking: 'default', effort: 'low' },
                 false
             )
-        ).toEqual({ output_config: { effort: 'medium' } });
+        ).toEqual({});
     });
 });

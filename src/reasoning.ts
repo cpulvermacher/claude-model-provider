@@ -84,16 +84,15 @@ export function createReasoningParams(
     return params;
 }
 
-/** highest supported level not above `requested`, or the lowest supported one */
+/** highest supported level not above `requested`; undefined if there is none */
 function clampEffort(
     requested: Effort,
     supported: Effort[]
 ): Effort | undefined {
     const maxIndex = effortLevels.indexOf(requested);
-    const candidates = supported.filter(
-        (level) => effortLevels.indexOf(level) <= maxIndex
-    );
-    return candidates.at(-1) ?? supported[0];
+    return supported
+        .filter((level) => effortLevels.indexOf(level) <= maxIndex)
+        .at(-1);
 }
 
 function isThinkingMode(value: unknown): value is ThinkingMode {
