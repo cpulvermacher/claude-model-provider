@@ -202,6 +202,8 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         options: vscode.ProvideLanguageModelChatResponseOptions
     ): Anthropic.MessageCreateParamsStreaming {
         const tools = this.convertTools(options.tools);
+        // TODO: newer 5.x models reject forced tool use; once 4.x is dropped,
+        // always send `auto` and remove the guard in createReasoningParams.
         const forcedToolUse =
             !!tools &&
             options.toolMode === vscode.LanguageModelChatToolMode.Required;
@@ -211,6 +213,8 @@ export class ChatModelProvider implements vscode.LanguageModelChatProvider {
         const promptCaching = config.get<boolean>('promptCaching', true);
         const reasoningSettings = resolveReasoningSettings(
             {
+                // TODO: only matters for 4.x (5.x thinks by default); remove
+                // once 4.x is dropped.
                 thinking: config.get<ThinkingMode>('thinking', 'default'),
                 effort: config.get<Effort | 'default'>('effort', 'default'),
             },
